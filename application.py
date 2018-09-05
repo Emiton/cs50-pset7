@@ -115,7 +115,42 @@ def quote():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     """Register user"""
-    return apology("TODO")
+    # User reached route via POST (as by submitting a form via POST)
+    if request.method == "POST":
+
+        # Ensure username was submitted
+        if not request.form.get("username"):
+            return apology("must provide username", 403)
+
+        # Query database for username
+        rows = db.execute("SELECT * FROM users WHERE username = :username", username=request.form.get("username"))
+
+        # Check if username is already in the database
+        if len(rows) != 0:
+            return apology("username already exists", 403)
+
+        # Ensure that password was submitted
+        if not request.form.get("password"):
+            return apology("must provide password", 403)
+
+        # Ensure that password was entered twice
+        if not request.form.get("confirmation"):
+            return apology("enter password again to make sure they match", 403)
+
+        # Ensure that passwords match
+        if not request.form.get("password") == request.form.get("confirmation"):
+            return apology("passwords must match", 403)
+
+        # Insert data into database
+        signup = db.execute("INSERT INTO users (username, hash) VALUES(:username, :hash_password)",
+                            username = request.form.get("username"),
+                            hash_password = generate_password_hash(request.form.get("password")))
+
+        return redirect("/")
+
+    # User reached route via GET (as by clicking a link or via redirect)
+    else:
+        return render_template("register.html")
 
 
 @app.route("/sell", methods=["GET", "POST"])
