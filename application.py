@@ -40,6 +40,7 @@ db = SQL("sqlite:///finance.db")
 @login_required
 def index():
     """Show portfolio of stocks"""
+    # history = db.execute("SELECT symbol FROM Stocks WHERE user_id=:userId", userId=session["user_id"])
     return apology("TODO")
 
 
@@ -47,7 +48,40 @@ def index():
 @login_required
 def buy():
     """Buy shares of stock"""
-    return apology("TODO")
+
+    if request.method == "POST":
+
+        # Check symbol
+        if not request.form.get("symbol"):
+            return apology("Must enter a stock symbol")
+
+        # Check shares
+        if not request.form.get("shares"):
+            return apology("Must enter amount of shares")
+        elif int(request.form.get("shares")) <= 0:
+            return apology("Must enter a positive number of shares")
+
+        # Get stock info
+        symbol = request.form.get("symbol")
+        stock = lookup(symbol)
+
+        if not stock:
+            return apology("Invalid stock symbol")
+
+        user = db.execute("SELECT cash from users WHERE id=:userId", userId=session["user_Id"])
+        totalBalance = float(user[0]["cash"])
+        stockCost = stock["price"] * int(request.form.get("shares"))
+
+        if stockCost > totalBalance:
+            return apology("u is broke :D :D :D")
+        else:
+            db.execute("INSERT INTO stocks (user_id, symbol, shares, price) VALUES (:user_id, :symbol, :shares, :price);",
+                user_id=session["user_id"], symbol=symbol, shares=request.form.get("shares"), price=stock["price"])
+            db.execute("UPDATE users SET cash=cash-:cost WHERE id=:userId;", cost=stockCost, userId=session["user_Id"])
+        return redirect("/")
+
+    else:
+        return render_template("buy.html")
 
 
 @app.route("/history")
@@ -109,7 +143,23 @@ def logout():
 @login_required
 def quote():
     """Get stock quote."""
-    return apology("TODO")
+    # User reached route via POST (as by submitting a form via POST)
+    if request.method == "POST":
+
+        # Ensure stock symbol is given
+        if not request.form.get("symbol"):
+            return apology("Must enter stock symbol")
+
+        symbol = request.form.get("symbol")
+        quote = lookup(symbol)
+
+        if quote:
+            return render_template("quoted.html", company=quote["name"], symbol=quote["symbol"], price=usd(quote["price"]))
+        else:
+            return apology("Must enter valid stock symbol")
+
+    else:
+        return render_template("quote.html")
 
 
 @app.route("/register", methods=["GET", "POST"])
