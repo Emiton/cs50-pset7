@@ -68,16 +68,20 @@ def buy():
         if not stock:
             return apology("Invalid stock symbol")
 
-        user = db.execute("SELECT cash from users WHERE id=:userId", userId=session["user_Id"])
+        user = db.execute("SELECT * FROM users WHERE id=:userId", userId=session["user_id"])
         totalBalance = float(user[0]["cash"])
         stockCost = stock["price"] * int(request.form.get("shares"))
 
         if stockCost > totalBalance:
             return apology("u is broke :D :D :D")
         else:
-            db.execute("INSERT INTO stocks (user_id, symbol, shares, price) VALUES (:user_id, :symbol, :shares, :price);",
-                user_id=session["user_id"], symbol=symbol, shares=request.form.get("shares"), price=stock["price"])
-            db.execute("UPDATE users SET cash=cash-:cost WHERE id=:userId;", cost=stockCost, userId=session["user_Id"])
+            # REMEMBER TO RECREATE PORTFOLIO TABLE
+            # FIGURE OUT PRIMARY KEY DEAL
+            # db.execute("CREATE TABLE IF NOT EXISTS portfolio (id integer PRIMARY KEY, symbol text NOT NULL, shares integer NOT NULL, price integer NOT NULL)")
+            db.execute("INSERT INTO portfolio (id, symbol, shares, price) VALUES (:user_id, :symbol, :shares, :price);",
+                user_id=session["user_id"], symbol=stock["symbol"], shares=int(request.form.get("shares")), price=float(stock["price"]))
+
+            db.execute("UPDATE users SET cash=cash-:cost WHERE id=:userId;", cost=stockCost, userId=session["user_id"])
         return redirect("/")
 
     else:
