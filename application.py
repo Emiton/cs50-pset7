@@ -1,4 +1,6 @@
 import os
+# TODO: remove sys
+import sys
 
 from cs50 import SQL
 from flask import Flask, flash, redirect, render_template, request, session
@@ -40,8 +42,39 @@ db = SQL("sqlite:///finance.db")
 @login_required
 def index():
     """Show portfolio of stocks"""
-    # history = db.execute("SELECT symbol FROM Stocks WHERE user_id=:userId", userId=session["user_id"])
-    return apology("TODO")
+    #history = db.execute("SELECT * FROM portfolio WHERE id=:userId", userId=session["user_id"])
+    history2 = db.execute("SELECT id, symbol, SUM(shares) FROM portfolio WHERE id=:userId GROUP BY symbol", userId=session["user_id"])
+    stocks = []
+    # stocks.append({
+    #     'symbol': history2[1]['symbol'],
+    #     'shares': history2[1]['SUM(shares)'],
+    #     'price': 5
+    # })
+    if history2:
+        user = db.execute("SELECT * FROM users WHERE id=:userId", userId=session["user_id"])
+        user_name = user[0]['username']
+        user_cash = user[0]['cash']
+        assets = 0
+        assets += user_cash
+        for transaction in history2:
+            symbol = transaction['symbol']
+            info = lookup(symbol)
+            name = info['name']
+            price = float(info['price'])
+            shares = float(transaction['SUM(shares)'])
+            total = shares * price
+            assets+= total
+            stockObject = {
+                'symbol': symbol,
+                'name': name,
+                'shares': shares,
+                'price': usd(price),
+                'total': usd(total)
+            }
+            stocks.append(stockObject)
+        return render_template("index.html", stocks=stocks, name=user_name, userNetWorth=usd(assets))
+    else:
+        return apology("TODO")
 
 
 @app.route("/buy", methods=["GET", "POST"])
@@ -75,9 +108,9 @@ def buy():
         if stockCost > totalBalance:
             return apology("u is broke :D :D :D")
         else:
-            # REMEMBER TO RECREATE PORTFOLIO TABLE
-            # FIGURE OUT PRIMARY KEY DEAL
-            # db.execute("CREATE TABLE IF NOT EXISTS portfolio (id integer PRIMARY KEY, symbol text NOT NULL, shares integer NOT NULL, price integer NOT NULL)")
+            # 'portfolio' table was created using the following command:
+            # CREATE TABLE portfolio (transaction_id INTEGER PRIMARY KEY,
+            #     id integer NOT NULL, symbol text NOT NULL, shares integer NOT NULL, price real NOT NULL)
             db.execute("INSERT INTO portfolio (id, symbol, shares, price) VALUES (:user_id, :symbol, :shares, :price);",
                 user_id=session["user_id"], symbol=stock["symbol"], shares=int(request.form.get("shares")), price=float(stock["price"]))
 
