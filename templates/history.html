@@ -9,6 +9,7 @@
         <thead>
             <tr>
                 <th>Symbol</th>
+                <th>Action</th>
                 <th>Shares</th>
                 <th>Price</th>
                 <th>Transacted</th>
@@ -18,6 +19,7 @@
             {% for stock in stocks %}
                 <tr>
                     <td>{{stock.symbol}}</td>
+                    <td>{{stock.action}}</td>
                     <td>{{stock.shares}}</td>
                     <td>{{stock.price}}</td>
                     <td>{{stock.purchaseTime}}</td>
