@@ -1,0 +1,3 @@
+# Create a new portfolio table with time column
+CREATE TABLE test (transaction_id INTEGER PRIMARY KEY, id integer NOT NULL, symbol text NOT NULL, shares integer NOT NULL, price real NOT NULL, time text NOT NULL)
+
