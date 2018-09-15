@@ -45,11 +45,7 @@ def index():
     #history = db.execute("SELECT * FROM portfolio WHERE id=:userId", userId=session["user_id"])
     history2 = db.execute("SELECT id, symbol, SUM(shares) FROM portfolio WHERE id=:userId GROUP BY symbol", userId=session["user_id"])
     stocks = []
-    # stocks.append({
-    #     'symbol': history2[1]['symbol'],
-    #     'shares': history2[1]['SUM(shares)'],
-    #     'price': 5
-    # })
+
     if history2:
         user = db.execute("SELECT * FROM users WHERE id=:userId", userId=session["user_id"])
         user_name = user[0]['username']
@@ -112,7 +108,7 @@ def buy():
             # CREATE TABLE portfolio (transaction_id INTEGER PRIMARY KEY,
             #     id integer NOT NULL, symbol text NOT NULL, shares integer NOT NULL, price real NOT NULL)
             db.execute("INSERT INTO portfolio (id, symbol, shares, price) VALUES (:user_id, :symbol, :shares, :price);",
-                user_id=session["user_id"], symbol=stock["symbol"], shares=int(request.form.get("shares")), price=float(stock["price"]))
+                user_id=session["user_id"], symbol=stock["symbol"], shares=int(request.form.get("shares")), price=stockCost * -1)
 
             db.execute("UPDATE users SET cash=cash-:cost WHERE id=:userId;", cost=stockCost, userId=session["user_id"])
         return redirect("/")
@@ -244,7 +240,45 @@ def register():
 @login_required
 def sell():
     """Sell shares of stock"""
-    return apology("TODO")
+    #return apology("TODO")
+
+    if request.method == "GET":
+        all_symbols = []
+        fake = ["A", "G", "SS"]
+        history = db.execute("SELECT symbol FROM portfolio WHERE id=:userId GROUP BY symbol", userId=session["user_id"])
+        for sym in history:
+            all_symbols.append(sym['symbol'])
+        return render_template("sell.html", stocks=all_symbols)
+
+    else:
+        symbol = request.form.get("symbol")
+        if not symbol:
+            return apology("must select symbol")
+
+        requested_shares = float(request.form.get("shares"))
+        if not requested_shares:
+            return apology("must choose number of shares")
+
+        history = db.execute("SELECT id, symbol, SUM(shares) FROM portfolio WHERE id=:userId GROUP BY symbol", userId=session["user_id"])
+        total_shares = 0
+        shares_match = False
+        for transaction in history:
+            if symbol == transaction['symbol']:
+                total_shares = int(transaction['SUM(shares)'])
+                shares_match = True
+
+        if shares_match and not requested_shares > total_shares :
+            stock = lookup(symbol)
+            total_cost = stock['price'] * requested_shares
+            db.execute("INSERT INTO portfolio (id, symbol, shares, price) VALUES (:user_id, :symbol, :shares, :earnings);",
+                user_id=session["user_id"], symbol=stock["symbol"], shares=int(requested_shares) * -1, earnings=total_cost)
+
+            db.execute("UPDATE users SET cash=cash+:earnings WHERE id=:userId;", earnings=total_cost, userId=session["user_id"])
+            return redirect("/")
+        else:
+            return apology("stock not in portfolio or too many shares requested")
+
+    return render_template("sell.html")
 
 
 def errorhandler(e):
